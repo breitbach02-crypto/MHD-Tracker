@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MHD Tracker</title>
+    <style>
+        :root {
+            --coffee-50: #f9f5f0;
+            --coffee-100: #f0e6d8;
+            --coffee-200: #e0ccaf;
+            --coffee-300: #c4a882;
+            --coffee-400: #a8885c;
+            --coffee-500: #8b6f47;
+            --coffee-600: #6b5434;
+            --coffee-700: #4f3e27;
+            --coffee-800: #382c1c;
+            --coffee-900: #241d16;
+            --cream: #faf6f1;
+            --paper: #fffdf9;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--cream);
+            color: var(--coffee-900);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--coffee-800) 0%, var(--coffee-700) 100%);
+            color: var(--coffee-50);
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 12px rgba(56, 44, 28, 0.3);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: none;
+            background: rgba(255,253,249,0.12);
+            color: var(--cream);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            -webkit-touch-callout: none;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.92);
+            background: rgba(255,253,249,0.2);
+        }
+
+        .icon-btn svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .add-btn {
+            background: var(--cream) !important;
+            color: var(--coffee-800) !important;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+        }
+
+        .add-btn:active {
+            background: var(--coffee-100) !important;
+        }
+
+        .add-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .item-count {
+            font-size: 0.8125rem;
+            color: var(--coffee-300);
+            margin-top: 4px;
+            font-weight: 400;
+        }
+
+        /* Filter Dropdown */
+        .filter-dropdown {
+            position: absolute;
+            top: 64px;
+            right: 12px;
+            background: var(--paper);
+            border-radius: 14px;
+            box-shadow: 0 8px 32px rgba(56, 44, 28, 0.25), 0 2px 8px rgba(0,0,0,0.1);
+            padding: 8px;
+            min-width: 220px;
+            transform-origin: top right;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 200;
+        }
+
+        .filter-dropdown.hidden {
+            opacity: 0;
+            transform: scale(0.95) translateY(-8px);
+            pointer-events: none;
+        }
+
+        .filter-dropdown label {
+            display: block;
+            font-size: 0.6875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--coffee-400);
+            padding: 10px 12px 4px;
+            font-weight: 600;
+        }
+
+        .filter-option {
+            width: 100%;
+            padding: 10px 12px;
+            border: none;
+            background: none;
+            border-radius: 10px;
+            text-align: left;
+            font-size: 0.9375rem;
+            color: var(--coffee-800);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.1s;
+        }
+
+        .filter-option:active {
+            background: var(--coffee-100);
+        }
+
+        .filter-option.active {
+            background: var(--coffee-50);
+            color: var(--coffee-600);
+            font-weight: 500;
+        }
+
+        .filter-option svg {
+            width: 18px;
+            height: 18px;
+            opacity: 0.6;
+        }
+
+        /* Product List */
+        .product-list {
+            padding: 12px;
+        }
+
+        .product-card {
+            background: var(--paper);
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(56, 44, 28, 0.06), 0 1px 2px rgba(56, 44, 28, 0.04);
+            border: 1px solid var(--coffee-100);
+            cursor: pointer;
+            transition: all 0.15s;
+            user-select: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-card:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 8px rgba(56, 44, 28, 0.1);
+        }
+
+        .product-card.expired {
+            border-color: #c0392b;
+            background: linear-gradient(135deg, #fdf5f5 0%, #fffafa 100%);
+        }
+
+        .product-card.expiring-soon {
+            border-color: #e67e22;
+            background: linear-gradient(135deg, #fef9f3 0%, #fffdf9 100%);
+        }
+
+        .product-card.upcoming {
+            border-color: #27ae60;
+        }
+
+        .card-main {
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .product-image {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            object-fit: cover;
+            background: var(--coffee-100);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .product-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .product-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--coffee-900);
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .product-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .category-badge {
+            font-size: 0.6875rem;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .category-probier {
+            background: var(--coffee-100);
+            color: var(--coffee-700);
+        }
+
+        .category-kuehlschrank {
+            background: #e8f4f8;
+            color: #2c5282;
+        }
+
+        .mhd-date {
+            font-size: 0.8125rem;
+            color: var(--coffee-500);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 500;
+        }
+
+        .mhd-date svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .expiry-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: 16px 16px 0 0;
+        }
+
+        .expired .expiry-indicator {
+            background: #c0392b;
+        }
+
+        .expiring-soon .expiry-indicator {
+            background: #e67e22;
+        }
+
+        .upcoming .expiry-indicator {
+            background: #27ae60;
+        }
+
+        .days-left {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: auto;
+        }
+
+        .expired .days-left {
+            background: #c0392b;
+            color: white;
+        }
+
+        .expiring-soon .days-left {
+            background: #e67e22;
+            color: white;
+        }
+
+        .upcoming .days-left {
+            background: var(--coffee-100);
+            color: var(--coffee-600);
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--coffee-50);
+        }
+
+        .reminder-formula {
+            font-size: 0.75rem;
+            color: var(--coffee-400);
+            font-style: italic;
+        }
+
+        .edit-hint {
+            font-size: 0.6875rem;
+            color: var(--coffee-300);
+            margin-left: auto;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+
+        .product-card:active .edit-hint {
+            opacity: 1;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 24px;
+            color: var(--coffee-400);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 1.125rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--coffee-600);
+        }
+
+        .empty-state p {
+            font-size: 0.9375rem;
+            line-height: 1.6;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(36, 29, 22, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 300;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--paper);
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            border-radius: 24px 24px 0 0;
+            padding: 24px;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--coffee-900);
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: var(--coffee-100);
+            border-radius: 10px;
+            color: var(--coffee-700);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--coffee-700);
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--coffee-200);
+            border-radius: 12px;
+            font-size: 1rem;
+            background: var(--cream);
+            color: var(--coffee-900);
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--coffee-500);
+            box-shadow: 0 0 0 3px var(--coffee-100);
+        }
+
+        select.form-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='[w3.org](http://www.w3.org/2000/svg)' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238b6f47' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-preview {
+            width: 100%;
+            height: 160px;
+            border: 2px dashed var(--coffee-300);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--coffee-400);
+            gap: 8px;
+            background: var(--cream);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .file-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .file-preview svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .file-preview span {
+            font-size: 0.875rem;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: var(--coffee-700);
+            color: var(--cream);
+        }
+
+        .btn-primary:active {
+            background: var(--coffee-800);
+        }
+
+        .btn-secondary {
+            background: var(--coffee-100);
+            color: var(--coffee-700);
+        }
+
+        .btn-secondary:active {
+            background: var(--coffee-200);
+        }
+
+        .btn-danger {
+            background: #fff0f0;
+            color: #c0392b;
+        }
+
+        /* Quick Edit Date */
+        .date-quick-edit {
+            position: fixed;
+            inset: 0;
+            background: rgba(36, 29, 22, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 400;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .date-quick-edit.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .date-picker-card {
+            background: var(--paper);
+            border-radius: 20px;
+            padding: 24px;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .date-picker-card h3 {
+            font-size: 1.125rem;
+            margin-bottom: 8px;
+            color: var(--coffee-900);
+        }
+
+        .date-picker-card p {
+            font-size: 0.875rem;
+            color: var(--coffee-500);
+            margin-bottom: 16px;
+        }
+
+        .date-input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .date-input-row .form-input {
+            text-align: center;
+            padding: 12px 8px;
+        }
+
+        .date-input-row .day-input {
+            flex: 1;
+        }
+
+        .date-input-row .month-input {
+            flex: 1;
+        }
+
+        .date-input-row .year-input {
+            flex: 1.4;
+        }
+
+        .date-input-divider {
+            display: flex;
+            align-items: center;
+            color: var(--coffee-400);
+            font-weight: 500;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--cream);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--coffee-300);
+            border-radius: 3px;
+        }
+
+        /* Remove number spinners */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-top">
+            <h1>☕ MHD Tracker</h1>
+            <div class="header-actions">
+                <button class="icon-btn" id="filterBtn" aria-label="Filter">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <line x1="4" y1="6" x2="20" y2="6"/>
+                        <line x1="4" y1="12" x2="20" y2="12"/>
+                        <line x1="4" y1="18" x2="20" y2="18"/>
+                    </svg>
+                </button>
+                <button class="icon-btn add-btn" id="addBtn" aria-label="Neues Produkt">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <p class="item-count" id="itemCount">0 Produkte</p>
+        <div class="filter-dropdown hidden" id="filterDropdown">
+            <label>Sortieren nach</label>
+            <button class="filter-option active" data-sort="expiry-asc">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M12 20l-4-4m4 4l4-4M8 4l4 4 4-4"/></svg>
+                MHD: Bald ablaufend zuerst
+            </button>
+            <button class="filter-option" data-sort="expiry-desc">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v10M12 4l-4 4m4-4l4 4M8 20l4-4 4 4"/></svg>
+                MHD: Spät ablaufend zuerst
+            </button>
+            <button class="filter-option" data-sort="name-asc">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h12M3 18h6"/></svg>
+                Name: A-Z
+            </button>
+            <button class="filter-option" data-sort="category">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Kategorie
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="product-list" id="productList">
+            <div class="empty-state" id="emptyState">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                </svg>
+                <h3>Noch keine Produkte</h3>
+                <p>Tippe auf das + oben rechts, um dein erstes Produkt mit MHD zu erfassen.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitle">Neues Produkt</h2>
+                <button class="modal-close" id="modalClose">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <form id="productForm">
+                <input type="hidden" id="editId">
+                <div class="form-group">
+                    <label for="productName">Produktname</label>
+                    <input type="text" class="form-input" id="productName" placeholder="z.B. Bio-Vollmilch" required>
+                </div>
+                <div class="form-group">
+                    <label for="category">Kategorie</label>
+                    <select class="form-input" id="category" required>
+                        <option value="MHD Probierwerkstatt">MHD Probierwerkstatt</option>
+                        <option value="MHD Kühlschrank">MHD Kühlschrank</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mhdDate">MHD Ablaufdatum (DD.MM.YYYY)</label>
+                    <input type="text" class="form-input" id="mhdDate" placeholder="01.07.2026" required
+                           pattern="^(0?[1-9]|[12][0-9]|3[01])\.(0?[1-9]|1[0-2])\.(19|20)\d{2}$">
+                </div>
+                <div class="form-group">
+                    <label>Produktbild</label>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="productImage" accept="image/*" capture="environment">
+                        <div class="file-preview" id="imagePreview">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <path d="M21 15l-5-5L5 21"/>
+                            </svg>
+                            <span>Foto aufnehmen oder auswählen</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions" id="formActions">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick Date Edit -->
+    <div class="date-quick-edit" id="dateQuickEdit">
+        <div class="date-picker-card">
+            <h3>MHD bearbeiten</h3>
+            <p id="dateEditProductName">Produktname</p>
+            <div class="date-input-row">
+                <input type="number" class="form-input day-input" id="quickDay" placeholder="TT" min="1" max="31">
+                <span class="date-input-divider">.</span>
+                <input type="number" class="form-input month-input" id="quickMonth" placeholder="MM" min="1" max="12">
+                <span class="date-input-divider">.</span>
+                <input type="number" class="form-input year-input" id="quickYear" placeholder="YYYY" min="2020" max="2100">
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" id="quickCancel">Abbrechen</button>
+                <button class="btn btn-primary" id="quickSave">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== DATA STORE ====================
+        const STORAGE_KEY = 'mhd_tracker_data';
+        let currentSort = 'expiry-asc';
+        let quickEditId = null;
+
+        function loadProducts() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            } catch {
+                return [];
+            }
+        }
+
+        function saveProducts(products) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+        }
+
+        function generateId() {
+            return 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        }
+
+        // ==================== DATE UTILITIES ====================
+        function parseDateInput(input) {
+            // Try DD.MM.YYYY
+            const fullMatch = input.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+            if (fullMatch) {
+                const [, d, m, y] = fullMatch;
+                const day = parseInt(d, 10);
+                const month = parseInt(m, 10) - 1;
+                const year = parseInt(y, 10);
+                const date = new Date(year, month, day);
+                if (date.getDate() === day && date.getMonth() === month && date.getFullYear() === year) {
+                    return date;
+                }
+            }
+
+            // Try MM.YYYY -> default to 1st
+            const partialMatch = input.match(/^(\d{1,2})\.(\d{4})$/);
+            if (partialMatch) {
+                const [, m, y] = partialMatch;
+                const month = parseInt(m, 10) - 1;
+                const year = parseInt(y, 10);
+                const date = new Date(year, month, 1);
+                if (date.getMonth() === month && date.getFullYear() === year) {
+                    return date;
+                }
+            }
+
+            return null;
+        }
+
+        function formatDateDE(date) {
+            const d = date.getDate().toString().padStart(2, '0');
+            const m = (date.getMonth() + 1).toString().padStart(2, '0');
+            const y = date.getFullYear();
+            return `${d}.${m}.${y}`;
+        }
+
+        // "Erinnerung an" formula
+        function getReminderFormula(date) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const target = new Date(date);
+            target.setHours(0, 0, 0, 0);
+            const daysLeft = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+
+            if (daysLeft < 0) return `ABGELAUFEN vor ${Math.abs(daysLeft)} Tag(en)`;
+            if (daysLeft === 0) return `HEUTE fällig!`;
+            if (daysLeft === 1) return `MORGEN fällig`;
+            if (daysLeft <= 3) return `IN ${daysLeft} TAGEN`;
+            if (daysLeft <= 7) return `IN ${daysLeft} Tagen`;
+            if (daysLeft <= 14) return `IN ${daysLeft} Tagen`;
+            return `Noch ${daysLeft} Tage`;
+        }
+
+        function getExpiryStatus(date) {
+            const daysLeft = Math.ceil((date - new Date().setHours(0,0,0,0)) / (1000 * 60 * 60 * 24));
+            if (daysLeft < 0) return 'expired';
+            if (daysLeft <= 3) return 'expiring-soon';
+            return 'upcoming';
+        }
+
+        function getDaysLeftText(date) {
+            const today = new Date().setHours(0,0,0,0);
+            const target = new Date(date).setHours(0,0,0,0);
+            const days = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+            if (days < 0) return `${Math.abs(days)}T überfällig`;
+            if (days === 0) return 'Heute';
+            return `${days}T`;
+        }
+
+        // ==================== RENDERING ====================
+        function getSortedProducts() {
+            const products = loadProducts();
+            switch (currentSort) {
+                case 'expiry-asc':
+                    return products.sort((a, b) => new Date(a.mhdDate) - new Date(b.mhdDate));
+                case 'expiry-desc':
+                    return products.sort((a, b) => new Date(b.mhdDate) - new Date(a.mhdDate));
+                case 'name-asc':
+                    return products.sort((a, b) => a.name.localeCompare(b.name));
+                case 'category':
+                    return products.sort((a, b) => a.category.localeCompare(b.category) || new Date(a.mhdDate) - new Date(b.mhdDate));
+                default:
+                    return products;
+            }
+        }
+
+        function renderList() {
+            const products = getSortedProducts();
+            const container = document.getElementById('productList');
+            const emptyState = document.getElementById('emptyState');
+
+            document.getElementById('itemCount').textContent = `${products.length} Produkt${products.length !== 1 ? 'e' : ''}`;
+
+            if (products.length === 0) {
+                container.innerHTML = '';
+                container.appendChild(emptyState);
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            container.innerHTML = '';
+
+            products.forEach(product => {
+                const date = new Date(product.mhdDate);
+                const status = getExpiryStatus(date);
+                const card = document.createElement('div');
+                card.className = `product-card ${status}`;
+                card.dataset.id = product.id;
+
+                const categoryClass = product.category === 'MHD Probierwerkstatt' ? 'category-probier' : 'category-kuehlschrank';
+                const emoji = product.category === 'MHD Probierwerkstatt' ? '🏭' : '🧊';
+
+                card.innerHTML = `
+                    <div class="expiry-indicator"></div>
+                    <div class="card-main">
+                        <div class="product-image">
+                            ${product.image ? `<img src="${product.image}" alt="">` : emoji}
+                        </div>
+                        <div class="product-info">
+                            <div class="product-name">${escapeHtml(product.name)}</div>
+                            <div class="product-meta">
+                                <span class="category-badge ${categoryClass}">${escapeHtml(product.category)}</span>
+                                <span class="mhd-date">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                    ${formatDateDE(date)}
+                                </span>
+                                <span class="days-left">${getDaysLeftText(date)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <span class="reminder-formula">${getReminderFormula(date)}</span>
+                        <span class="edit-hint">Tippen zum Bearbeiten</span>
+                    </div>
+                `;
+
+                card.addEventListener('click', () => openQuickEdit(product));
+                container.appendChild(card);
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ==================== MODAL HANDLING ====================
+        const modal = document.getElementById('productModal');
+        const dateQuickEdit = document.getElementById('dateQuickEdit');
+        const filterDropdown = document.getElementById('filterDropdown');
+
+        function openModal(editProduct = null) {
+            const form = document.getElementById('productForm');
+            const title = document.getElementById('modalTitle');
+            const actions = document.getElementById('formActions');
+
+            if (editProduct) {
+                title.textContent = 'Produkt bearbeiten';
+                document.getElementById('editId').value = editProduct.id;
+                document.getElementById('productName').value = editProduct.name;
+                document.getElementById('category').value = editProduct.category;
+                document.getElementById('mhdDate').value = formatDateDE(new Date(editProduct.mhdDate));
+
+                const preview = document.getElementById('imagePreview');
+                if (editProduct.image) {
+                    preview.innerHTML = `<img src="${editProduct.image}" alt="">`;
+                } else {
+                    resetImagePreview();
+                }
+
+                // Add delete button for edit
+                if (!document.getElementById('deleteBtn')) {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.type = 'button';
+                    deleteBtn.className = 'btn btn-danger';
+                    deleteBtn.id = 'deleteBtn';
+                    deleteBtn.textContent = 'Löschen';
+                    deleteBtn.onclick = () => deleteProduct(editProduct.id);
+                    actions.insertBefore(deleteBtn, actions.firstChild);
+                }
+            } else {
+                title.textContent = 'Neues Produkt';
+                form.reset();
+                document.getElementById('editId').value = '';
+                resetImagePreview();
+                const deleteBtn = document.getElementById('deleteBtn');
+                if (deleteBtn) deleteBtn.remove();
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            const deleteBtn = document.getElementById('deleteBtn');
+            if (deleteBtn) deleteBtn.remove();
+        }
+
+        function resetImagePreview() {
+            document.getElementById('imagePreview').innerHTML = `
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <path d="M21 15l-5-5L5 21"/>
+                </svg>
+                <span>Foto aufnehmen oder auswählen</span>
+            `;
+        }
+
+        // ==================== QUICK EDIT ====================
+        function openQuickEdit(product) {
+            quickEditId = product.id;
+            const date = new Date(product.mhdDate);
+
+            document.getElementById('dateEditProductName').textContent = product.name;
+            document.getElementById('quickDay').value = date.getDate();
+            document.getElementById('quickMonth').value = date.getMonth() + 1;
+            document.getElementById('quickYear').value = date.getFullYear();
+
+            dateQuickEdit.classList.add('active');
+        }
+
+        function closeQuickEdit() {
+            dateQuickEdit.classList.remove('active');
+            quickEditId = null;
+        }
+
+        function saveQuickEdit() {
+            if (!quickEditId) return;
+
+            const day = parseInt(document.getElementById('quickDay').value, 10);
+            const month = parseInt(document.getElementById('quickMonth').value, 10) - 1;
+            const year = parseInt(document.getElementById('quickYear').value, 10);
+
+            const date = new Date(year, month, day);
+            if (date.getDate() !== day || date.getMonth() !== month || date.getFullYear() !== year) {
+                alert('Ungültiges Datum');
+                return;
+            }
+
+            const products = loadProducts();
+            const idx = products.findIndex(p => p.id === quickEditId);
+            if (idx !== -1) {
+                products[idx].mhdDate = date.toISOString();
+                saveProducts(products);
+                renderList();
+            }
+            closeQuickEdit();
+        }
+
+        // ==================== CRUD ====================
+        function saveProduct(e) {
+            e.preventDefault();
+
+            const editId = document.getElementById('editId').value;
+            const name = document.getElementById('productName').value.trim();
+            const category = document.getElementById('category').value;
+            const dateInput = document.getElementById('mhdDate').value.trim();
+
+            // Support both DD.MM.YYYY and DD/MM/YYYY
+            const normalized = dateInput.replace(/\//g, '.');
+            const parsedDate = parseDateInput(normalized);
+
+            if (!parsedDate) {
+                alert('Bitte gültiges Datum eingeben (DD.MM.YYYY oder MM.YYYY)');
+                return;
+            }
+
+            const products = loadProducts();
+            const imageData = document.getElementById('imagePreview').querySelector('img')?.src || null;
+
+            if (editId) {
+                const idx = products.findIndex(p => p.id === editId);
+                if (idx !== -1) {
+                    products[idx] = {
+                        ...products[idx],
+                        name,
+                        category,
+                        mhdDate: parsedDate.toISOString(),
+                        image: imageData !== null ? imageData : products[idx].image
+                    };
+                }
+            } else {
+                const newProduct = {
+                    id: generateId(),
+                    name,
+                    category,
+                    mhdDate: parsedDate.toISOString(),
+                    image: imageData,
+                    createdAt: new Date().toISOString()
+                };
+                products.push(newProduct);
+            }
+
+            saveProducts(products);
+            renderList();
+            closeModal();
+        }
+
+        function deleteProduct(id) {
+            if (!confirm('Produkt wirklich löschen?')) return;
+            const products = loadProducts().filter(p => p.id !== id);
+            saveProducts(products);
+            renderList();
+            closeModal();
+        }
+
+        // ==================== IMAGE HANDLING ====================
+        const fileInput = document.getElementById('productImage');
+        const imagePreview = document.getElementById('imagePreview');
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                imagePreview.innerHTML = `<img src="${event.target.result}" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ==================== EVENT LISTENERS ====================
+        document.getElementById('addBtn').addEventListener('click', () => openModal());
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('cancelBtn').addEventListener('click', closeModal);
+        document.getElementById('productForm').addEventListener('submit', saveProduct);
+
+        document.getElementById('filterBtn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            filterDropdown.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!filterDropdown.contains(e.target) && e.target !== document.getElementById('filterBtn')) {
+                filterDropdown.classList.add('hidden');
+            }
+        });
+
+        document.querySelectorAll('.filter-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-option').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentSort = btn.dataset.sort;
+                filterDropdown.classList.add('hidden');
+                renderList();
+            });
+        });
+
+        // Quick edit handlers
+        document.getElementById('quickCancel').addEventListener('click', closeQuickEdit);
+        document.getElementById('quickSave').addEventListener('click', saveQuickEdit);
+
+        // Close modal on overlay tap (but not content)
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+        dateQuickEdit.addEventListener('click', (e) => {
+            if (e.target === dateQuickEdit) closeQuickEdit();
+        });
+
+        // Auto-add dots while typing date
+        document.getElementById('mhdDate').addEventListener('input', function(e) {
+            const val = e.target.value.replace(/\//g, '.').replace(/[^\d.]/g, '');
+            const parts = val.split('.');
+            let result = val;
+
+            if (!val.includes('.')) {
+                if (val.length > 2) result = val.slice(0, 2) + '.' + val.slice(2);
+            } else if (parts.length === 2 && parts[1].length > 2) {
+                result = parts[0] + '.' + parts[1].slice(0, 2) + '.' + parts[1].slice(2).replace(/\./g, '');
+            }
+
+            e.target.value = result;
+        });
+
+        // ==================== INITIALIZE ====================
+        renderList();
+    </script>
+</body>
+</html>
